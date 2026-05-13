@@ -1,0 +1,38 @@
+name: nanmesh-check
+on:
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+  push:
+    branches: [main]
+
+jobs:
+  trust-check:
+    runs-on: ubuntu-latest
+    name: Gate on NaN Mesh shared operational memory
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run nanmesh-check
+        id: nanmesh
+        uses: NaNMesh/nanmesh-check@v0
+        with:
+          task-type: 'agent_billing_query'
+          # Inferred from manifests (package.json deps), but pinned here for clarity:
+          stack: 'nextjs,supabase,clerk,react'
+          min-confidence-security: '0.7'
+          min-confidence-integration: '0.5'
+          fail-on-critical-unresolved: 'true'
+          # Set submit-execution-report=true + add NANMESH_AGENT_KEY as a
+          # repo secret to also contribute reports back to the network on success.
+          submit-execution-report: 'false'
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "blocked-tools: ${{ steps.nanmesh.outputs.blocked-tools }}"
+          echo "reports-submitted: ${{ steps.nanmesh.outputs.reports-submitted }}"
